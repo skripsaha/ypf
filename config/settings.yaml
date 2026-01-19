@@ -1,0 +1,11 @@
+project:
+  name: "YPF Pro"
+  version: "2.0.0"
+
+scanner:
+  ignore_dirs: [".git", "__pycache__", "venv", "reports", "docs"]
+  target_extensions: [".py", ".js", ".php"]
+
+visualizer:
+  output_format: "png"
+  show_labels: true

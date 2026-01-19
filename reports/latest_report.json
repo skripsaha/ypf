@@ -1,0 +1,44 @@
+[
+    {
+        "type": "SQL Injection",
+        "severity": "critical",
+        "details": "SQL-injection via f-string construction",
+        "file": "demo_app/app.py"
+    },
+    {
+        "type": "SQL Injection",
+        "severity": "critical",
+        "details": "Dangerous execution of variable 'query'",
+        "file": "demo_app/app.py"
+    },
+    {
+        "type": "RCE / Command Injection",
+        "severity": "critical",
+        "details": "Critical: Unsafe system command execution",
+        "file": "demo_app/app.py"
+    },
+    {
+        "type": "XSS / Injection",
+        "severity": "high",
+        "details": "SSTI / XSS Vulnerability",
+        "file": "demo_app/app.py"
+    },
+    {
+        "type": "weak cryptography",
+        "severity": "medium",
+        "details": "weak hashing algorithm (md5)",
+        "file": "demo_app/app.py"
+    },
+    {
+        "type": "insecure deserialization",
+        "severity": "high",
+        "details": "insecure deserialization (Pickle)",
+        "file": "demo_app/app.py"
+    },
+    {
+        "type": "hardcoded secret",
+        "severity": "medium",
+        "details": "possible sensitive data in code",
+        "file": "demo_app/app.py"
+    }
+]

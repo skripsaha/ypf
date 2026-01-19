@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>ypf</title>
+    <style>
+        * { 
+            box-sizing: border-box; 
+            text-transform: lowercase; 
+            font-family: 'JetBrains Mono', 'ypf', -apple-system, sans-serif; 
+        }
+        body { background: #f9f9f9; color: #333; margin: 40px; }
+        header { margin-bottom: 40px; }
+        h1 { font-weight: 300; letter-spacing: -1px; }
+        
+        .logo { 
+            position: absolute; 
+            top: 20px; 
+            right: 40px; 
+            width: 100px;
+            height: auto;
+            z-index: 1000;
+        }
+
+        .section { background: #fff; border: 1px solid #eee; padding: 20px; border-radius: 8px; margin-bottom: 20px; }
+        table { width: 100%; border-collapse: collapse; }
+        th, td { padding: 12px; text-align: left; border-bottom: 1px solid #eee; }
+        th { color: #888; font-weight: 400; font-size: 0.9rem; }
+        
+        button { 
+            background: #000; color: #fff; border: none; padding: 12px 24px; 
+            border-radius: 6px; cursor: pointer; transition: 0.2s; 
+        }
+        button:hover { opacity: 0.8; }
+        button:disabled { background: #ccc; }
+
+        #status-msg { margin-left: 15px; color: #888; font-style: italic; }
+        .critical { color: #e74c3c; font-weight: 600; }
+        
+        #graph-img { max-width: 100%; border-radius: 4px; display: none; }
+        .placeholder { padding: 40px; color: #ccc; text-align: center; border: 1px dashed #ddd; }
+
+        .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.1); }
+        .modal { display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); 
+                background: #fff; border: 1px solid #000; padding: 30px; width: 600px; border-radius: 12px; z-index: 100; }
+        pre { background: #f4f4f4; padding: 15px; border-radius: 6px; overflow-x: auto; text-transform: none; } /* код оставляем как есть */
+    </style>
+</head>
+<body>
+    
+<img src="/images/ypf.png" alt="ypf logo" class="logo">
+
+<header>
+    <h1>ypf / дэшборд</h1>
+    <button id="scan-btn" onclick="runScan()">начать проверку</button>
+    <span id="status-msg">система готова</span>
+</header>
+
+<div class="section">
+    <h3>карта уязвимостей</h3>
+    <div id="graph-container">
+        <img id="graph-img" src="" alt="граф">
+        <div id="graph-placeholder" class="placeholder">граф пока не построен</div>
+    </div>
+</div>
+
+<div class="section">
+    <h3>отчет по безопасности</h3>
+    <table>
+        <thead>
+            <tr>
+                <th>тип</th>
+                <th>уровень</th>
+                <th>файл</th>
+                <th>действие</th>
+            </tr>
+        </thead>
+        <tbody id="vuln-table">
+            <tr><td colspan="4" style="text-align: center; color: #aaa;">здесь пока пусто</td></tr>
+        </tbody>
+    </table>
+</div>
+
+<div class="modal-overlay" id="overlay" onclick="closeModal()"></div>
+<div class="modal" id="fix-modal">
+    <h3 id="modal-title">совет от ии</h3>
+    <p>исправленный код:</p>
+    <pre id="fix-code"></pre>
+    <p style="color: #666;" id="fix-desc"></p>
+    <button onclick="closeModal()" style="background: #eee; color: #000;">закрыть</button>
+</div>
+
+
+
+<script>
+    const funPhrases = [
+        "ищу дыры в сыре...",
+        "проверяю под диваном...",
+        "разгоняю хакеров...",
+        "считаю кофейные зерна...",
+        "почти готово, честно...",
+        "анализирую байты и биты..."
+    ];
+
+    async function runScan() {
+        const btn = document.getElementById('scan-btn');
+        const status = document.getElementById('status-msg');
+        btn.disabled = true;
+
+        const phraseInterval = setInterval(() => {
+            status.innerText = funPhrases[Math.floor(Math.random() * funPhrases.length)];
+        }, 800);
+
+        try {
+            const res = await fetch('/api/scan');
+            if (res.ok) {
+                const img = document.getElementById('graph-img');
+                img.src = '/reports/attack_graph.png?t=' + Date.now();
+                img.style.display = 'block';
+                document.getElementById('graph-placeholder').style.display = 'none';
+                
+                status.innerText = 'проверка завершена успешно';
+                await loadVulns();
+            }
+        } catch (e) {
+            status.innerText = 'ой, что-то сломалось';
+        } finally {
+            clearInterval(phraseInterval);
+            btn.disabled = false;
+        }
+    }
+
+    async function loadVulns() {
+        const res = await fetch('/api/get_vulns');
+        const data = await res.json();
+        const table = document.getElementById('vuln-table');
+        
+        if (data.length === 0) {
+            table.innerHTML = '<tr><td colspan="4" style="text-align: center;">уязвимостей не найдено. спите спокойно.</td></tr>';
+            return;
+        }
+
+        table.innerHTML = data.map(v => `
+            <tr>
+                <td class="${v.severity === 'CRITICAL' ? 'critical' : ''}">${v.type}</td>
+                <td>${v.severity}</td>
+                <td>${v.file}</td>
+                <td><button onclick="showFix('${v.type}')" style="padding: 5px 10px; font-size: 0.8rem;">посмотреть</button></td>
+            </tr>
+        `).join('');
+    }
+
+    async function showFix(type) {
+        const res = await fetch('/api/fix', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({type})
+        });
+        const data = await res.json();
+        
+        document.getElementById('fix-code').innerText = data.code;
+        document.getElementById('fix-desc').innerText = data.desc;
+        document.getElementById('fix-modal').style.display = 'block';
+        document.getElementById('overlay').style.display = 'block';
+    }
+
+    function closeModal() {
+        document.getElementById('fix-modal').style.display = 'none';
+        document.getElementById('overlay').style.display = 'none';
+    }
+
+    window.onload = loadVulns;
+</script>
+
+</body>
+</html>
